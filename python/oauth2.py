@@ -60,6 +60,7 @@ IMAPFE and pass it as the second argument to the AUTHENTICATE command.
   a AUTHENTICATE XOAUTH2 a9sha9sfs[...]9dfja929dk==
 """
 
+import os
 import base64
 import imaplib
 import json
@@ -68,7 +69,15 @@ import smtplib
 import sys
 import urllib
 
+DEFAULT_IMAP_SERVER = os.getenv('IMAP_SERVER', 'imap.gmail.com')
+DEFAULT_IMAP_PORT = 993
+DEFAULT_SMTP_SERVER = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
+DEFAULT_SMTP_PORT = 587
+
 DEFAULT_SCOPE='https://mail.google.com/'
+
+DEFAULT_AUTH_EP = 'o/oauth2/auth'
+DEFAULT_TOKEN_EP = 'o/oauth2/token'
 
 # Hardcoded dummy redirect URI for non-web apps.
 DEFAULT_REDIRECT_URI = 'urn:ietf:wg:oauth:2.0:oob'
@@ -196,7 +205,7 @@ def GeneratePermissionUrl(base_url, client_id, redirect_uri, scope,
   if login_hint is not None:
       params['login_hint'] = login_hint
   params['response_type'] = 'code'
-  return '%s?%s' % (IssuerUrl(base_url, 'o/oauth2/auth'),
+  return '%s?%s' % (IssuerUrl(base_url, DEFAULT_AUTH_EP),
                     FormatUrlParams(params))
 
 
@@ -221,7 +230,7 @@ def AuthorizeTokens(base_url, client_id, client_secret, redirect_uri, authorizat
   params['code'] = authorization_code
   params['redirect_uri'] = redirect_uri
   params['grant_type'] = 'authorization_code'
-  request_url = IssuerUrl(base_url, 'o/oauth2/token')
+  request_url = IssuerUrl(base_url, DEFAULT_TOKEN_EP)
 
   response = urllib.urlopen(request_url, urllib.urlencode(params)).read()
   return json.loads(response)
@@ -245,7 +254,7 @@ def RefreshToken(base_url, client_id, client_secret, refresh_token):
   params['client_secret'] = client_secret
   params['refresh_token'] = refresh_token
   params['grant_type'] = 'refresh_token'
-  request_url = IssuerUrl(base_url, 'o/oauth2/token')
+  request_url = IssuerUrl(base_url, DEFAULT_TOKEN_EP)
 
   response = urllib.urlopen(request_url, urllib.urlencode(params)).read()
   return json.loads(response)
@@ -281,7 +290,7 @@ def TestImapAuthentication(user, auth_string):
         Must not be base64-encoded, since imaplib does its own base64-encoding.
   """
   print
-  imap_conn = imaplib.IMAP4_SSL('imap.gmail.com')
+  imap_conn = imaplib.IMAP4_SSL(DEFAULT_IMAP_SERVER, DEFAULT_IMAP_PORT)
   imap_conn.debug = 4
   imap_conn.authenticate('XOAUTH2', lambda x: auth_string)
   imap_conn.select('INBOX')
@@ -296,7 +305,7 @@ def TestSmtpAuthentication(user, auth_string):
         GenerateOAuth2String.
   """
   print
-  smtp_conn = smtplib.SMTP('smtp.gmail.com', 587)
+  smtp_conn = smtplib.SMTP(DEFAULT_SMTP_SERVER, DEFAULT_SMTP_PORT)
   smtp_conn.set_debuglevel(True)
   smtp_conn.ehlo('test')
   smtp_conn.starttls()
