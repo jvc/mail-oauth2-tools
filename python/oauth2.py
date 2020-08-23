@@ -70,6 +70,10 @@ import urllib
 
 DEFAULT_SCOPE='https://mail.google.com/'
 
+# Hardcoded dummy redirect URI for non-web apps.
+DEFAULT_REDIRECT_URI = 'urn:ietf:wg:oauth:2.0:oob'
+
+
 def SetupOptionParser():
   # Usage message is the module's docstring.
   parser = OptionParser(usage=__doc__)
@@ -120,15 +124,14 @@ def SetupOptionParser():
                     dest='quiet',
                     help='Omit verbose descriptions and only print '
                          'machine-readable outputs.')
+  parser.add_option('--redirect_uri',
+                    default=DEFAULT_REDIRECT_URI,
+                    help='Redirect URI client is registered with')
   return parser
 
 
 # The URL root for making OAuth requests
 BASE_URL = 'https://accounts.google.com'
-
-
-# Hardcoded dummy redirect URI for non-web apps.
-REDIRECT_URI = 'urn:ietf:wg:oauth:2.0:oob'
 
 
 def IssuerUrl(command):
@@ -168,7 +171,7 @@ def FormatUrlParams(params):
   return '&'.join(param_fragments)
 
 
-def GeneratePermissionUrl(client_id, scope):
+def GeneratePermissionUrl(client_id, redirect_uri, scope):
   """Generates the URL for authorizing access.
 
   This uses the "OAuth2 for Installed Applications" flow described at
@@ -182,14 +185,14 @@ def GeneratePermissionUrl(client_id, scope):
   """
   params = {}
   params['client_id'] = client_id
-  params['redirect_uri'] = REDIRECT_URI
+  params['redirect_uri'] = redirect_uri
   params['scope'] = scope
   params['response_type'] = 'code'
   return '%s?%s' % (IssuerUrl('o/oauth2/auth'),
                     FormatUrlParams(params))
 
 
-def AuthorizeTokens(client_id, client_secret, authorization_code):
+def AuthorizeTokens(client_id, client_secret, redirect_uri, authorization_code):
   """Obtains OAuth access token and refresh token.
 
   This uses the application portion of the "OAuth2 for Installed Applications"
@@ -208,7 +211,7 @@ def AuthorizeTokens(client_id, client_secret, authorization_code):
   params['client_id'] = client_id
   params['client_secret'] = client_secret
   params['code'] = authorization_code
-  params['redirect_uri'] = REDIRECT_URI
+  params['redirect_uri'] = redirect_uri
   params['grant_type'] = 'authorization_code'
   request_url = IssuerUrl('o/oauth2/token')
 
@@ -321,9 +324,12 @@ def main(argv):
   elif options.generate_oauth2_token:
     RequireOptions(options, 'client_id', 'client_secret')
     print 'To authorize token, visit this url and follow the directions:'
-    print '  %s' % GeneratePermissionUrl(options.client_id, options.scope)
+    print '  %s' % GeneratePermissionUrl(options.client_id,
+                                         options.redirect_uri,
+                                         options.scope)
     authorization_code = raw_input('Enter verification code: ')
     response = AuthorizeTokens(options.client_id, options.client_secret,
+                               options.redirect_uri,
                                 authorization_code)
     print 'Refresh Token: %s' % response['refresh_token']
     print 'Access Token: %s' % response['access_token']
