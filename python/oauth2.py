@@ -101,6 +101,9 @@ def SetupOptionParser():
                     help='Client secret of the application that is '
                          'authenticating. See OAuth2 documentation for '
                          'details.')
+  parser.add_option('--login_hint',
+                    default=None,
+                    help='Login hint to pass for auth generation')
   parser.add_option('--access_token',
                     default=None,
                     help='OAuth2 access token')
@@ -173,7 +176,8 @@ def FormatUrlParams(params):
   return '&'.join(param_fragments)
 
 
-def GeneratePermissionUrl(base_url, client_id, redirect_uri, scope):
+def GeneratePermissionUrl(base_url, client_id, redirect_uri, scope,
+                          login_hint):
   """Generates the URL for authorizing access.
 
   This uses the "OAuth2 for Installed Applications" flow described at
@@ -189,6 +193,8 @@ def GeneratePermissionUrl(base_url, client_id, redirect_uri, scope):
   params['client_id'] = client_id
   params['redirect_uri'] = redirect_uri
   params['scope'] = scope
+  if login_hint is not None:
+      params['login_hint'] = login_hint
   params['response_type'] = 'code'
   return '%s?%s' % (IssuerUrl(base_url, 'o/oauth2/auth'),
                     FormatUrlParams(params))
@@ -331,7 +337,8 @@ def main(argv):
     print '  %s' % GeneratePermissionUrl(options.base_url,
                                          options.client_id,
                                          options.redirect_uri,
-                                         options.scope)
+                                         options.scope,
+                                         options.login_hint)
     authorization_code = raw_input('Enter verification code: ')
     response = AuthorizeTokens(options.base_url,
                                options.client_id, options.client_secret,
