@@ -122,15 +122,15 @@ def SetupOptionParser():
   return parser
 
 
-# The URL root for accessing Google Accounts.
-GOOGLE_ACCOUNTS_BASE_URL = 'https://accounts.google.com'
+# The URL root for making OAuth requests
+BASE_URL = 'https://accounts.google.com'
 
 
 # Hardcoded dummy redirect URI for non-web apps.
 REDIRECT_URI = 'urn:ietf:wg:oauth:2.0:oob'
 
 
-def AccountsUrl(command):
+def IssuerUrl(command):
   """Generates the Google Accounts URL.
 
   Args:
@@ -139,7 +139,7 @@ def AccountsUrl(command):
   Returns:
     A URL for the given command.
   """
-  return '%s/%s' % (GOOGLE_ACCOUNTS_BASE_URL, command)
+  return '%s/%s' % (BASE_URL, command)
 
 
 def UrlEscape(text):
@@ -184,7 +184,7 @@ def GeneratePermissionUrl(client_id, scope='https://mail.google.com/'):
   params['redirect_uri'] = REDIRECT_URI
   params['scope'] = scope
   params['response_type'] = 'code'
-  return '%s?%s' % (AccountsUrl('o/oauth2/auth'),
+  return '%s?%s' % (IssuerUrl('o/oauth2/auth'),
                     FormatUrlParams(params))
 
 
@@ -209,7 +209,7 @@ def AuthorizeTokens(client_id, client_secret, authorization_code):
   params['code'] = authorization_code
   params['redirect_uri'] = REDIRECT_URI
   params['grant_type'] = 'authorization_code'
-  request_url = AccountsUrl('o/oauth2/token')
+  request_url = IssuerUrl('o/oauth2/token')
 
   response = urllib.urlopen(request_url, urllib.urlencode(params)).read()
   return json.loads(response)
@@ -233,7 +233,7 @@ def RefreshToken(client_id, client_secret, refresh_token):
   params['client_secret'] = client_secret
   params['refresh_token'] = refresh_token
   params['grant_type'] = 'refresh_token'
-  request_url = AccountsUrl('o/oauth2/token')
+  request_url = IssuerUrl('o/oauth2/token')
 
   response = urllib.urlopen(request_url, urllib.urlencode(params)).read()
   return json.loads(response)
