@@ -292,6 +292,7 @@ def TestSmtpAuthentication(user, auth_string):
   smtp_conn.set_debuglevel(True)
   smtp_conn.ehlo('test')
   smtp_conn.starttls()
+  smtp_conn.ehlo('test')
   smtp_conn.docmd('AUTH', 'XOAUTH2 ' + base64.b64encode(auth_string))
 
 
