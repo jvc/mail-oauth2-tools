@@ -68,6 +68,7 @@ import smtplib
 import sys
 import urllib
 
+DEFAULT_SCOPE='https://mail.google.com/'
 
 def SetupOptionParser():
   # Usage message is the module's docstring.
@@ -97,7 +98,7 @@ def SetupOptionParser():
                     default=None,
                     help='OAuth2 refresh token')
   parser.add_option('--scope',
-                    default='https://mail.google.com/',
+                    default=DEFAULT_SCOPE,
                     help='scope for the access token. Multiple scopes can be '
                          'listed separated by spaces with the whole argument '
                          'quoted.')
@@ -167,7 +168,7 @@ def FormatUrlParams(params):
   return '&'.join(param_fragments)
 
 
-def GeneratePermissionUrl(client_id, scope='https://mail.google.com/'):
+def GeneratePermissionUrl(client_id, scope):
   """Generates the URL for authorizing access.
 
   This uses the "OAuth2 for Installed Applications" flow described at
