@@ -1,156 +1,129 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this file,
- * You can obtain one at http://mozilla.org/MPL/2.0/. */
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at http://mozilla.org/MPL/2.0/.
 
-/**
- * Details of supported OAuth2 Providers.
- */
-var EXPORTED_SYMBOLS = ["OAuth2Providers"];
+# Map of hostnames to [issuer, scope].
+host_config = {
+    "imap.googlemail.com": ["accounts.google.com", "https://mail.google.com/"],
+    "smtp.googlemail.com": ["accounts.google.com", "https://mail.google.com/"],
+    "pop.googlemail.com": ["accounts.google.com", "https://mail.google.com/"],
+    "imap.gmail.com": ["accounts.google.com", "https://mail.google.com/"],
+    "smtp.gmail.com": ["accounts.google.com", "https://mail.google.com/"],
+    "pop.gmail.com": ["accounts.google.com", "https://mail.google.com/"],
 
-/**
- * Map of hostnames to [issuer, scope].
- */
-var kHostnames = new Map([
-  ["imap.googlemail.com", ["accounts.google.com", "https://mail.google.com/"]],
-  ["smtp.googlemail.com", ["accounts.google.com", "https://mail.google.com/"]],
-  ["pop.googlemail.com", ["accounts.google.com", "https://mail.google.com/"]],
-  ["imap.gmail.com", ["accounts.google.com", "https://mail.google.com/"]],
-  ["smtp.gmail.com", ["accounts.google.com", "https://mail.google.com/"]],
-  ["pop.gmail.com", ["accounts.google.com", "https://mail.google.com/"]],
+    "imap.mail.ru": ["o2.mail.ru", "mail.imap"],
+    "smtp.mail.ru": ["o2.mail.ru", "mail.imap"],
 
-  ["imap.mail.ru", ["o2.mail.ru", "mail.imap"]],
-  ["smtp.mail.ru", ["o2.mail.ru", "mail.imap"]],
+    "imap.yandex.com": ["oauth.yandex.com", "mail:imap_full"],
+    "smtp.yandex.com": ["oauth.yandex.com", "mail:smtp"],
 
-  ["imap.yandex.com", ["oauth.yandex.com", "mail:imap_full"]],
-  ["smtp.yandex.com", ["oauth.yandex.com", "mail:smtp"]],
+    "imap.mail.yahoo.com": ["login.yahoo.com", "mail-w"],
+    "pop.mail.yahoo.com": ["login.yahoo.com", "mail-w"],
+    "smtp.mail.yahoo.com": ["login.yahoo.com", "mail-w"],
 
-  ["imap.mail.yahoo.com", ["login.yahoo.com", "mail-w"]],
-  ["pop.mail.yahoo.com", ["login.yahoo.com", "mail-w"]],
-  ["smtp.mail.yahoo.com", ["login.yahoo.com", "mail-w"]],
+    "imap.aol.com": ["login.aol.com", "mail-w"],
+    "pop.aol.com": ["login.aol.com", "mail-w"],
+    "smtp.aol.com": ["login.aol.com", "mail-w"],
 
-  ["imap.aol.com", ["login.aol.com", "mail-w"]],
-  ["pop.aol.com", ["login.aol.com", "mail-w"]],
-  ["smtp.aol.com", ["login.aol.com", "mail-w"]],
-
-  [
-    "outlook.office365.com",
+    "outlook.office365.com":
     [
-      "login.microsoftonline.com",
-      "https://outlook.office365.com/IMAP.AccessAsUser.All https://outlook.office365.com/POP.AccessAsUser.All https://outlook.office365.com/SMTP.Send offline_access",
+        "login.microsoftonline.com",
+        "https://outlook.office365.com/IMAP.AccessAsUser.All https://outlook.office365.com/POP.AccessAsUser.All https://outlook.office365.com/SMTP.Send offline_access",
     ],
-  ],
-  [
-    "smtp.office365.com",
+    "smtp.office365.com":
     [
-      "login.microsoftonline.com",
-      "https://outlook.office365.com/IMAP.AccessAsUser.All https://outlook.office365.com/POP.AccessAsUser.All https://outlook.office365.com/SMTP.Send offline_access",
+        "login.microsoftonline.com",
+        "https://outlook.office365.com/IMAP.AccessAsUser.All https://outlook.office365.com/POP.AccessAsUser.All https://outlook.office365.com/SMTP.Send offline_access",
     ],
-  ],
-]);
+}
 
-/**
- * Map of issuers to clientId, clientSecret, authorizationEndpoint, tokenEndpoint.
- * Issuer is a unique string for the organization that a Thunderbird account
- * was registered at.
- *
- * For the moment these details are hard-coded, since dynamic client
- * registration is not yet supported. Don't copy these values for your
- * own application - register one for yourself! This code (and possibly even the
- * registration itself) will disappear when this is switched to dynamic
- * client registration.
- */
-var kIssuers = new Map([
-  [
-    "accounts.google.com",
+# Map of issuers to authorizationEndpoint, tokenEndpoint. Issuer is a unique
+# string for the organization that your application/client is registered at.
+issuer_eps = {
+    "accounts.google.com":
     [
-      "406964657835-aq8lmia8j95dhl1a2bvharmfk3t1hgqj.apps.googleusercontent.com",
-      "kSmqreRr0qwBWJgbf5Y-PjSU",
-      "https://accounts.google.com/o/oauth2/auth",
-      "https://www.googleapis.com/oauth2/v3/token",
+        "https://accounts.google.com/o/oauth2/auth",
+        "https://www.googleapis.com/oauth2/v3/token",
     ],
-  ],
-  [
-    "o2.mail.ru",
+    "o2.mail.ru":
     [
-      "thunderbird",
-      "I0dCAXrcaNFujaaY",
-      "https://o2.mail.ru/login",
-      "https://o2.mail.ru/token",
+        "https://o2.mail.ru/login",
+        "https://o2.mail.ru/token",
     ],
-  ],
-  [
-    "oauth.yandex.com",
+    "oauth.yandex.com":
     [
-      "2a00bba7374047a6ab79666485ffce31",
-      "3ded85b4ec574c2187a55dc49d361280",
-      "https://oauth.yandex.com/authorize",
-      "https://oauth.yandex.com/token",
+        "https://oauth.yandex.com/authorize",
+        "https://oauth.yandex.com/token",
     ],
-  ],
-  [
-    "login.yahoo.com",
+    "login.yahoo.com":
     [
-      "dj0yJmk9NUtCTWFMNVpTaVJmJmQ9WVdrOVJ6UjVTa2xJTXpRbWNHbzlNQS0tJnM9Y29uc3VtZXJzZWNyZXQmeD0yYw--",
-      "f2de6a30ae123cdbc258c15e0812799010d589cc",
-      "https://api.login.yahoo.com/oauth2/request_auth",
-      "https://api.login.yahoo.com/oauth2/get_token",
+        "https://api.login.yahoo.com/oauth2/request_auth",
+        "https://api.login.yahoo.com/oauth2/get_token",
     ],
-  ],
-  [
-    "login.aol.com",
+    "login.aol.com":
     [
-      "dj0yJmk9OXRHc1FqZHRQYzVvJmQ9WVdrOU1UQnJOR0pvTjJrbWNHbzlNQS0tJnM9Y29uc3VtZXJzZWNyZXQmeD02NQ--",
-      "79c1c11991d148ddd02a919000d69879942fc278",
-      "https://api.login.aol.com/oauth2/request_auth",
-      "https://api.login.aol.com/oauth2/get_token",
+        "https://api.login.aol.com/oauth2/request_auth",
+        "https://api.login.aol.com/oauth2/get_token",
     ],
-  ],
+    "login.microsoftonline.com":
+    [
+        # https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-v2-protocols#endpoints
+        "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+        "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+    ],
+}
 
-  [
-    "login.microsoftonline.com",
-    [
-      "08162f7c-0fd2-4200-a84a-f25a4db0b584", // Application (client) ID
-      "TxRBilcHdC6WGBee]fs?QR:SJ8nI[g82", // @see App registrations | Certificates & secrets
-      // https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-v2-protocols#endpoints
-      "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
-      "https://login.microsoftonline.com/common/oauth2/v2.0/token",
-    ],
-  ],
-]);
 
-/**
- * OAuth2Providers: Methods to lookup OAuth2 parameters for supported OAuth2
- * providers.
- */
-var OAuth2Providers = {
-  /**
-   * Map a hostname to the relevant issuer and scope.
-   *
-   * @param {string} hostname - The hostname of the server. For example
-   *  "imap.googlemail.com".
-   *
-   * @returns {Array} An array containing [issuer, scope] for the hostname, or
-   *   undefined if not found.
-   *   - issuer is a string representing the organization
-   *   - scope is an OAuth2 parameter describing the required access level
-   */
-  getHostnameDetails(hostname) {
-    return kHostnames.get(hostname);
-  },
+class ProviderLookupError(LookupError):
+    pass
 
-  /**
-   * Map an issuer to OAuth2 account details.
-   *
-   * @param {string} issuer - The organization issuing OAuth2 parameters, e.g.
-   *   "accounts.google.com".
-   *
-   * @returns {Array} An array containing [clientId, clientSecret, authorizationEndpoint, tokenEndpoint].
-   *   clientId and clientSecret are strings representing the account registered
-   *   for Thunderbird with the organization.
-   *   authorizationEndpoint and tokenEndpoint are url strings representing
-   *   endpoints to access OAuth2 authentication.
-   */
-  getIssuerDetails(issuer) {
-    return kIssuers.get(issuer);
-  },
-};
+
+def get_hosts():
+    """
+    Return list of supported provider host names.
+    """
+    return host_config.keys()
+
+
+def get_host_config(host):
+    """
+    Return the configuration of a host. This is (issuer, scope)
+    """
+    try:
+        return host_config[host]
+    except KeyError:
+        raise ProviderLookupError("Unknown host: %s" % (host))
+
+
+def get_issuer_eps(issuer):
+    """
+    Return (auth_endpoint, token_endpoint)
+    """
+    try:
+        return issuer_eps[issuer]
+    except KeyError:
+        raise ProviderLookupError("Unknown issuer: %s" % (issuer))
+
+
+def main():
+    """
+    Print all information to stdout.
+    """
+    for host in get_hosts():
+        (issuer, scope) = get_host_config(host)
+        (auth_ep, tok_ep) = get_issuer_eps(issuer)
+
+        print "%s" % (host)
+        print "  Issuer: ",
+        print issuer
+        print "   Scope: ",
+        print scope
+        print " Auth EP: ",
+        print auth_ep
+        print "Token EP: ",
+        print tok_ep
+        print
+
+
+if __name__ == "__main__":
+    main()
