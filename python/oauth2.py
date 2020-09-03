@@ -68,6 +68,13 @@ from optparse import OptionParser
 import smtplib
 import sys
 import urllib
+import providers
+
+# Setting OAUTH2_MAIL_SERVER indicates to set default issuer and end-points that
+# are known to be valid for a given server. This is based on how Mozilla
+# Thunderbird does it and accesses a representation of a snapshot of the data
+# their application uses via 'import .providers'
+MAIL_SERVER = os.getenv('OAUTH2_MAIL_SERVER')
 
 DEFAULT_IMAP_SERVER = os.getenv('IMAP_SERVER', 'imap.gmail.com')
 DEFAULT_IMAP_PORT = 993
@@ -86,11 +93,11 @@ DEFAULT_REDIRECT_URI = 'urn:ietf:wg:oauth:2.0:oob'
 DEFAULT_BASE_URL = 'https://accounts.google.com'
 
 
-def SetupOptionParser():
+def SetupOptionParser(def_base_url, def_scope, def_redir_uri):
   # Usage message is the module's docstring.
   parser = OptionParser(usage=__doc__)
   parser.add_option('--base_url',
-                    default=DEFAULT_BASE_URL,
+                    default=def_base_url,
                     help='Base URL for authentication')
   parser.add_option('--generate_oauth2_token',
                     action='store_true',
@@ -120,7 +127,7 @@ def SetupOptionParser():
                     default=None,
                     help='OAuth2 refresh token')
   parser.add_option('--scope',
-                    default=DEFAULT_SCOPE,
+                    default=def_scope,
                     help='scope for the access token. Multiple scopes can be '
                          'listed separated by spaces with the whole argument '
                          'quoted.')
@@ -143,7 +150,7 @@ def SetupOptionParser():
                     help='Omit verbose descriptions and only print '
                          'machine-readable outputs.')
   parser.add_option('--redirect_uri',
-                    default=DEFAULT_REDIRECT_URI,
+                    default=def_redir_uri,
                     help='Redirect URI client is registered with')
   return parser
 
@@ -185,7 +192,7 @@ def FormatUrlParams(params):
   return '&'.join(param_fragments)
 
 
-def GeneratePermissionUrl(base_url, client_id, redirect_uri, scope,
+def GeneratePermissionUrl(auth_ep, client_id, redirect_uri, scope,
                           login_hint):
   """Generates the URL for authorizing access.
 
@@ -205,11 +212,11 @@ def GeneratePermissionUrl(base_url, client_id, redirect_uri, scope,
   if login_hint is not None:
       params['login_hint'] = login_hint
   params['response_type'] = 'code'
-  return '%s?%s' % (IssuerUrl(base_url, DEFAULT_AUTH_EP),
+  return '%s?%s' % (auth_ep,
                     FormatUrlParams(params))
 
 
-def AuthorizeTokens(base_url, client_id, client_secret, redirect_uri, authorization_code):
+def AuthorizeTokens(token_ep, client_id, client_secret, redirect_uri, authorization_code):
   """Obtains OAuth access token and refresh token.
 
   This uses the application portion of the "OAuth2 for Installed Applications"
@@ -230,7 +237,7 @@ def AuthorizeTokens(base_url, client_id, client_secret, redirect_uri, authorizat
   params['code'] = authorization_code
   params['redirect_uri'] = redirect_uri
   params['grant_type'] = 'authorization_code'
-  request_url = IssuerUrl(base_url, DEFAULT_TOKEN_EP)
+  request_url = token_ep
 
   response = urllib.urlopen(request_url, urllib.urlencode(params)).read()
   return json.loads(response)
@@ -321,8 +328,45 @@ def RequireOptions(options, *args):
 
 
 def main(argv):
-  options_parser = SetupOptionParser()
+  # If MAIL_SERVER is provided load the end-points and scope based on the data
+  # from .providers
+  if MAIL_SERVER:
+    host = MAIL_SERVER
+
+    # TODO: Handle providers.ProviderLookupError and deal with --quiet when this
+    # happens - see if stderr reports back to app
+    (issuer, scope) = providers.get_host_config(host)
+
+    # For documentation purposes the base_url is set using the issuer.
+    # This is not used however since end-points provide the full url
+    def_base_url = 'https://%s' % (issuer)
+
+    (full_auth_ep, full_tok_ep) = providers.get_issuer_eps(issuer)
+
+    def_scope = scope
+  else:
+    (full_auth_ep, full_tok_ep) = ("", "")
+    def_base_url = DEFAULT_BASE_URL
+    def_scope = DEFAULT_SCOPE
+    def_auth_ep = DEFAULT_AUTH_EP
+    def_tok_ep = DEFAULT_TOKEN_EP
+
+  options_parser = SetupOptionParser(def_base_url, def_scope,
+                                     DEFAULT_REDIRECT_URI)
   (options, args) = options_parser.parse_args()
+
+  # When using the providers data it provides a fully qualified end-point
+  # instead of just a suffix. This overrides base_url and end-point defaults.
+  if full_auth_ep:
+    auth_ep = full_auth_ep
+  else:
+    full_auth_ep = IssuerUrl(options.base_url, def_auth_ep)
+
+  if full_tok_ep:
+    tok_ep = full_tok_ep
+  else:
+    tok_ep = IssuerUrl(options.base_url, def_tok_ep)
+
   if options.refresh_token:
     RequireOptions(options, 'client_id', 'client_secret')
     response = RefreshToken(options.base_url,
@@ -343,13 +387,13 @@ def main(argv):
   elif options.generate_oauth2_token:
     RequireOptions(options, 'client_id', 'client_secret')
     print 'To authorize token, visit this url and follow the directions:'
-    print '  %s' % GeneratePermissionUrl(options.base_url,
+    print '  %s' % GeneratePermissionUrl(auth_ep,
                                          options.client_id,
                                          options.redirect_uri,
                                          options.scope,
                                          options.login_hint)
     authorization_code = raw_input('Enter verification code: ')
-    response = AuthorizeTokens(options.base_url,
+    response = AuthorizeTokens(tok_ep,
                                options.client_id, options.client_secret,
                                options.redirect_uri,
                                 authorization_code)
